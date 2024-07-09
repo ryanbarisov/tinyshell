@@ -9,6 +9,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/syscall.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 extern char** environ;
 
@@ -81,8 +83,12 @@ char* lookup_cmd(char* cmd)
 
 int read_cmd(char* line, int bufsize, char** tokens)
 {
-	if(fgets(line, bufsize, stdin) == NULL)
+	char * newline;
+	if( (newline = readline("shell> ")) == NULL )
 		return -1;
+	add_history(newline);
+	strncpy(line, newline, line_size);
+	free(newline);
 	return parse_line(line, tokens, max_tokens);
 }
 
@@ -129,7 +135,7 @@ void execute_cmd(char** args)
 		else
 		{
 			args[0] = lookup_cmd(args[0]);
-			int result = execve(args[0], args, NULL);
+			execve(args[0], args, NULL);
 			printf("Failed to find command '%s'.\n", args[0]);
 			exit(EXIT_FAILURE);
 		}
@@ -143,7 +149,6 @@ void loop()
 	char* tokens[max_tokens+1];
 	do
 	{
-		printf("shell> ");
 		if(!in_loop) break;
 		int result = read_cmd(line, line_size, tokens);
 		if(result == -1) break;
